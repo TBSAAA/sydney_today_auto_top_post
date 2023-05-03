@@ -113,6 +113,18 @@ def get_selection_type():
         sql = "insert into selection_type(id,type,table_sign) values (%s,%s,%s)"
         conn.execute_many(sql, data_list)
 
+def delete_item(token, num):
+    sql = "select ad_id from task_list WHERE token = '{}'".format(token)
+    ad_ids = conn.fetch_all(sql)
+    delete_ad_ids = []
+    while len(delete_ad_ids) != num-1:
+        random_index = random.randint(0, num - 1)
+        if ad_ids[random_index]['ad_id'] not in delete_ad_ids:
+            delete_ad_ids.append(ad_ids[random_index]['ad_id'])
+    for ad_id in delete_ad_ids:
+        sql = "delete from task_list where ad_id = '{}'".format(ad_id)
+        conn.execute(sql)
+
 
 if __name__ == '__main__':
     get_selection_type()
@@ -136,10 +148,16 @@ if __name__ == '__main__':
 
     # Because of the top-post rule, the same type can only be top-posted once, and one must be deleted.
     with Connect.Connect() as conn:
-        sql = "select ad_id from task_list WHERE token = '{}'".format(local_settings.sydney_today['token'])
-        ad_ids = conn.fetch_all(sql)
-        # get random int number, 0 or 1
-        random_index = random.randint(0, 1)
-        ad_id = ad_ids[random_index]['ad_id']
-        sql = "delete from task_list where ad_id = '{}'".format(ad_id)
-        conn.execute(sql)
+        sql = "select ad_id,token from task_list WHERE type = 'yellowpage'"
+        info = conn.fetch_all(sql)
+        token_list = {}
+        for i in info:
+            if i['token'] not in token_list:
+                token_list[i['token']] = 1
+            else:
+                token_list[i['token']] += 1
+
+        for i in token_list:
+            if token_list[i] > 1:
+                delete_item(i, token_list[i])
+
